@@ -7,6 +7,7 @@ import pygame as pg
 
 WIDTH = 1100  # ゲームウィンドウの幅
 HEIGHT = 650  # ゲームウィンドウの高さ
+NUM_OF_BOMBS = 5  # 爆弾の数
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -145,7 +146,7 @@ def main():
     screen = pg.display.set_mode((WIDTH, HEIGHT))    
     bg_img = pg.image.load("fig/pg_bg.jpg")
     bird = Bird((300, 200))
-    bomb = Bomb((255, 0, 0), 10)
+    bombs = [Bomb((255, 0, 0), 10) for _ in range(NUM_OF_BOMBS)]
     beam = None  # ゲーム初期化時にはビームは存在しない
     clock = pg.time.Clock()
     tmr = 0
@@ -158,42 +159,38 @@ def main():
                 beam = Beam(bird)            
         screen.blit(bg_img, [0, 0])
 
-        # 爆弾とビームの衝突判定
-        if bomb is not None and beam is not None:
-            if beam.rct.colliderect(bomb.rct):
-                beam = None  # ビームを消滅させる
-                bomb = None  # 爆弾を消滅させる
-
-                # こうかとんが喜ぶ画像に切り替える
-                bird.change_img(6, screen) 
-                pg.display.update()  
-
-        # こうかとんと爆弾の衝突判定
-        if bomb is not None:
+        # ① こうかとんと爆弾の衝突判定（ゲームオーバー処理）
+        for i, bomb in enumerate(bombs):
             if bird.rct.colliderect(bomb.rct):
                 bird.change_img(8, screen)
                 pg.display.update()
                 time.sleep(1)
                 return
         
-        if bird.rct.colliderect(bomb.rct):
-            # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
-            bird.change_img(8, screen)
-            pg.display.update()
-            time.sleep(1)
-            return
+        # ② ビームと爆弾の衝突判定（撃ち落とす処理）
+        for i, bomb in enumerate(bombs):
+            if beam is not None:
+                if beam.rct.colliderect(bomb.rct):  # ビームで爆弾を撃ち落としたら
+                    bird.change_img(6, screen)
+                    pg.display.update()
+                    beam = None
+                    bombs[i] = None
+        
+        # 撃ち落とされて None になった爆弾をリストから消去する
+        bombs = [bomb for bomb in bombs if bomb is not None]
 
+        # ③ こうかとんの描画更新
         key_lst = pg.key.get_pressed() 
         bird.update(key_lst, screen)
 
-        # 爆弾の描画更新（Noneじゃない時だけ）
-        if bomb is not None:
+        # ④ 爆弾の描画更新（これがないと爆弾が動かない＆表示されません）
+        for bomb in bombs:
             bomb.update(screen)
             
-        # ビームの描画更新（Noneじゃない時だけ）
+        # ⑤ ビームの描画更新（Noneじゃない時だけ）
         if beam is not None:
             beam.update(screen)
-        
+         
         pg.display.update()
         tmr += 1
         clock.tick(50)
