@@ -164,6 +164,10 @@ def main():
                 beam = None  # ビームを消滅させる
                 bomb = None  # 爆弾を消滅させる
 
+                # こうかとんが喜ぶ画像に切り替える
+                bird.change_img(6, screen) 
+                pg.display.update()  
+
         # こうかとんと爆弾の衝突判定
         if bomb is not None:
             if bird.rct.colliderect(bomb.rct):
