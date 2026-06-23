@@ -1,3 +1,4 @@
+import math  # ★演習4：角度計算のために追加
 import os
 import random
 import sys
@@ -56,6 +57,7 @@ class Bird:
         self.img = __class__.imgs[(+5, 0)]
         self.rct: pg.Rect = self.img.get_rect()
         self.rct.center = xy
+        self.dire = (+5, 0)  # ★演習4：初期の向き（右向き）を定義
 
     def change_img(self, num: int, screen: pg.Surface):
         """
@@ -80,6 +82,7 @@ class Bird:
             self.rct.move_ip(-sum_mv[0], -sum_mv[1])
         if not (sum_mv[0] == 0 and sum_mv[1] == 0):
             self.img = __class__.imgs[tuple(sum_mv)]
+            self.dire = tuple(sum_mv)  # ★演習4：合計移動量が0でない時、向きを更新
         screen.blit(self.img, self.rct)
 
 
@@ -89,13 +92,21 @@ class Beam:
     """
     def __init__(self, bird: Bird):
         """
-        ビーム画像Surfaceを生成する
+        こうかとんの向きに応じてビームの速度、角度、初期位置を設定する（演習4）
         """
-        self.img = pg.image.load("fig/beam.png")
+        # 1. こうかとんの向いている方向を速度(vx, vy)に代入
+        self.vx, self.vy = bird.dire
+
+        # 2. 直交座標から極座標の角度に変換し、画像を回転させる
+        theta = math.atan2(-self.vy, self.vx)
+        angle = math.degrees(theta)
+        self.img = pg.transform.rotozoom(pg.image.load("fig/beam.png"), angle, 1.0)
+        
         self.rct = self.img.get_rect()
-        self.rct.centery = bird.rct.centery
-        self.rct.left = bird.rct.right
-        self.vx, self.vy = +5, 0
+        
+        # 3. こうかとんの向きを考慮した初期位置の計算
+        self.rct.centerx = bird.rct.centerx + (bird.rct.width * self.vx // 5)
+        self.rct.centery = bird.rct.centery + (bird.rct.height * self.vy // 5)
 
     def update(self, screen: pg.Surface):
         """
@@ -181,7 +192,7 @@ def main():
     explosions = []   # 演習3：爆発エフェクトを管理するリスト
     score = Score()   # 演習1：スコアのインスタンス
     
-    # ★ ゲームオーバー表示用のフォントとSurfaceを準備
+    # ゲームオーバー表示用のフォントとSurfaceを準備
     go_font = pg.font.Font(None, 100)                     # 大きめのフォントを設定
     go_img = go_font.render("GAME OVER", True, (255, 0, 0)) # 赤色の文字で生成
     go_rct = go_img.get_rect()
@@ -204,7 +215,7 @@ def main():
         for bomb in bombs:
             if bird.rct.colliderect(bomb.rct):
                 bird.change_img(8, screen)      # こうかとんが泣く画像に切り替え
-                screen.blit(go_img, go_rct)     # ★ 画面中央に「GAME OVER」の文字を描画
+                screen.blit(go_img, go_rct)     # 画面中央に「GAME OVER」の文字を描画
                 pg.display.update()             # 画面に即座に反映させる
                 time.sleep(2)                   # 2秒間そのままフリーズして見せる
                 return                          # ゲーム終了
@@ -225,7 +236,7 @@ def main():
         for j, beam in enumerate(beams):
             if beam is not None:
                 yoko, tate = check_bound(beam.rct)
-                if not yoko:
+                if not yoko or not tate:  # ★演習4：上下左右どちらかの画面外に出たら消去
                     beams[j] = None
 
         # 4. リストのクリーンアップ
