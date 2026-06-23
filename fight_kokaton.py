@@ -140,6 +140,23 @@ class Bomb:
         self.rct.move_ip(self.vx, self.vy)
         screen.blit(self.img, self.rct)
 
+class Score:
+    """
+    打ち落とした爆弾の数を表示するスコアに関するクラス
+    """
+    def __init__(self):
+        self.fonto = pg.font.Font(None, 50)                  # フォントの設定 (サイズ50)
+        self.color = (0, 0, 255)                             # 文字色の設定 (青)
+        self.score = 0                                       # スコアの初期値 (0)
+        self.img = self.fonto.render(f"Score: {self.score}", 0, self.color) # 文字列Surfaceの生成
+        self.rct = self.img.get_rect()
+        self.rct.center = (100, HEIGHT - 50)                 # 画面左下 (横100, 縦は画面下部から50)
+
+    def update(self, screen: pg.Surface):
+        # 現在のスコアを反映した文字列Surfaceを毎フレーム再生成する
+        self.img = self.fonto.render(f"Score: {self.score}", 0, self.color)
+        screen.blit(self.img, self.rct)                      # スクリーンにblit
+
 
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
@@ -148,6 +165,7 @@ def main():
     bird = Bird((300, 200))
     bombs = [Bomb((255, 0, 0), 10) for _ in range(NUM_OF_BOMBS)]
     beam = None  # ゲーム初期化時にはビームは存在しない
+    score = Score()
     clock = pg.time.Clock()
     tmr = 0
     while True:
@@ -159,7 +177,7 @@ def main():
                 beam = Beam(bird)            
         screen.blit(bg_img, [0, 0])
 
-        # ① こうかとんと爆弾の衝突判定（ゲームオーバー処理）
+        #  こうかとんと爆弾の衝突判定（ゲームオーバー処理）
         for i, bomb in enumerate(bombs):
             if bird.rct.colliderect(bomb.rct):
                 bird.change_img(8, screen)
@@ -171,7 +189,7 @@ def main():
                 time.sleep(1)
                 return
         
-        # ② ビームと爆弾の衝突判定（撃ち落とす処理）
+        #  ビームと爆弾の衝突判定（撃ち落とす処理）
         for i, bomb in enumerate(bombs):
             if beam is not None:
                 if beam.rct.colliderect(bomb.rct):  # ビームで爆弾を撃ち落としたら
@@ -179,22 +197,27 @@ def main():
                     pg.display.update()
                     beam = None
                     bombs[i] = None
+
+                    score.score += 1
         
         # 撃ち落とされて None になった爆弾をリストから消去する
         bombs = [bomb for bomb in bombs if bomb is not None]
 
-        # ③ こうかとんの描画更新
+        #  こうかとんの描画更新
         key_lst = pg.key.get_pressed() 
         bird.update(key_lst, screen)
 
-        # ④ 爆弾の描画更新（これがないと爆弾が動かない＆表示されません）
+        #  爆弾の描画更新
         for bomb in bombs:
             bomb.update(screen)
             
-        # ⑤ ビームの描画更新（Noneじゃない時だけ）
+        #  ビームの描画更新
         if beam is not None:
             beam.update(screen)
          
+        #  スコアの描画更新
+        score.update(screen)
+
         pg.display.update()
         tmr += 1
         clock.tick(50)
